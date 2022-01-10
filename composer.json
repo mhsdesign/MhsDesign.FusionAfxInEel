@@ -1,0 +1,18 @@
+{
+    "description": "",
+    "type": "neos-package",
+    "name": "mhsdesign/fusionafxineel",
+    "require": {
+        "neos/flow": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "MhsDesign\\FusionAfxInEel\\": "Classes/"
+        }
+    },
+    "extra": {
+        "neos": {
+            "package-key": "MhsDesign.FusionAfxInEel"
+        }
+    }
+}
