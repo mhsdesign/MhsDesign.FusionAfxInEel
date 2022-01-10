@@ -2,6 +2,7 @@
 
 namespace MhsDesign\FusionAfxInEel\Tests\Functional;
 
+use MhsDesign\FusionAfxInEel\AfxContent\AfxContentRenderer;
 use Neos\Flow\Mvc\Controller\ControllerContext;
 use Neos\Fusion\Core\Runtime;
 use PHPUnit\Framework\TestCase;
@@ -96,7 +97,7 @@ class EelAfxRuntimeTest extends TestCase
                 <p>
                     {Array.join(Array.map([1, 2, 3], item => afx(
                         <a>{item}</a>
-                    )), '')}
+                    ).withContext({item: item})), '')}
                 </p>
                 `
                 Fusion,
@@ -227,8 +228,13 @@ class EelAfxRuntimeTest extends TestCase
 
         $renderedFusion = $runtime->render('root');
 
+        if ($renderedFusion instanceof AfxContentRenderer) {
+            $renderedFusion = (string)$renderedFusion;
+        }
+
         $expectedOutput = is_string($expectedOutput) ? trim($expectedOutput) : $expectedOutput;
         $renderedFusion = is_string($renderedFusion) ? trim($renderedFusion) : $renderedFusion;
+
 
         self::assertSame($expectedOutput, $renderedFusion, 'Rendered Fusion didnt match expected.');
     }
