@@ -2,4 +2,4 @@
 Neos:
   Fusion:
     defaultContext:
-      Mhs.AfxContent: 'MhsDesign\FusionAfxInEel\Helper\AfxContentHelper'
+      Mhs.AfxContent: 'MhsDesign\FusionAfxInEel\AfxContent\Helper\AfxContentHelper'

@@ -78,7 +78,7 @@ class FusionParserExtractAfxFromEelAspect
         $replaceAfxFunctionsInEelWithThisPathAndRememberAfx = function ($matches) use (&$additionalAfxContentPathValues): string {
             $index = count($additionalAfxContentPathValues);
             $additionalAfxContentPathValues[] = $matches['afx'];
-            return "Mhs.AfxContent.render(this, $index)";
+            return "Mhs.AfxContent.fromRuntimePathAndIndex(mhsRuntimePath, $index)";
         };
 
         $cleanedEelLine = preg_replace_callback(
@@ -94,12 +94,9 @@ class FusionParserExtractAfxFromEelAspect
         $indent = $matches['indent'];
         $objectPath = $matches['objectPath'];
 
-        $lineStart = $indent . self::guessFromObjectPathOfLineWhereToApplyTheAfxSnippetSoItsAvailableViaThis($objectPath);
-
-
         $newFusionLines = '';
         foreach ($additionalAfxContentPathValues as $index => $afxContentPathValue) {
-            $newFusionLines .= "{$lineStart}@afxContent.$index = afx`$afxContentPathValue`\n";
+            $newFusionLines .= "{$indent}{$objectPath}.@afxContent.$index = afx`$afxContentPathValue`\n";
         }
         $newFusionLines .= $cleanedEelLine;
 
@@ -127,46 +124,5 @@ class FusionParserExtractAfxFromEelAspect
         $joinPoint->setMethodArgument('sourceCode', $newSourceCode);
 
         return $joinPoint->getAdviceChain()->proceed($joinPoint);
-    }
-
-    protected const PATTERN_GET_PARENT_OBJECT_PATH = <<<'REGEX'
-    /
-        (?:
-            prototype\(.*?\)
-            |"(?:\\"|[^"])+"
-            |'(?:\\'|[^'])+'
-            |@[a-zA-Z0-9:_-]+
-            |[a-zA-Z0-9:_-]+
-        )\.
-    /Ax
-    REGEX;
-
-    /**
-     * hacky and unreliable way! see failing tests of this whole approach
-     *
-     * 'value' => ''
-     * 'foo.bar' => 'foo.'
-     * '@ process.bar' => ''
-     *
-     */
-    protected static function guessFromObjectPathOfLineWhereToApplyTheAfxSnippetSoItsAvailableViaThis(string $objectPath): string
-    {
-        if (!preg_match_all(self::PATTERN_GET_PARENT_OBJECT_PATH, $objectPath, $matches)) {
-            return '';
-        }
-
-        $upper = '';
-
-        $paths = $matches[0];
-        $pathsLastIndex = count($paths) - 1;
-
-        foreach ($paths as $i => $path) {
-            if ($i === $pathsLastIndex
-                && strpos($path, '@') === 0) {
-                break;
-            }
-            $upper .= $path;
-        }
-        return $upper;
     }
 }

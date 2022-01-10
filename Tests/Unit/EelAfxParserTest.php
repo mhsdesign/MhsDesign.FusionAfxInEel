@@ -25,19 +25,19 @@ class EelAfxParserTest extends TestCase
                 '__objectType' => 'Neos.Fusion:Value',
                 '__value' => null,
                 '__eelExpression' => null,
-                '__meta' => [
-                    'afxContent' => [
-                        0 => [
-                            '__objectType' => 'Neos.Fusion:Tag',
-                            '__value' => null,
-                            '__eelExpression' => null,
-                            'tagName' => 'p',
-                            'content' => 'foo'
-                        ]
-                    ]
-                ],
                 'value' => [
-                    '__eelExpression' => 'Mhs.AfxContent.render(this, 0)',
+                    '__meta' => [
+                        'afxContent' => [
+                            0 => [
+                                '__objectType' => 'Neos.Fusion:Tag',
+                                '__value' => null,
+                                '__eelExpression' => null,
+                                'tagName' => 'p',
+                                'content' => 'foo'
+                            ]
+                        ]
+                    ],
+                    '__eelExpression' => 'Mhs.AfxContent.fromRuntimePathAndIndex(mhsRuntimePath, 0)',
                     '__value' => null,
                     '__objectType' => null,
                 ]
@@ -65,19 +65,19 @@ class EelAfxParserTest extends TestCase
                 '__objectType' => 'Neos.Fusion:Value',
                 '__value' => null,
                 '__eelExpression' => null,
-                '__meta' => [
-                    'afxContent' => [
-                        0 => [
-                            '__objectType' => 'Neos.Fusion:Tag',
-                            '__value' => null,
-                            '__eelExpression' => null,
-                            'tagName' => 'p',
-                            'content' => 'foo'
-                        ]
-                    ]
-                ],
                 'value' => [
-                    '__eelExpression' => 'Mhs.AfxContent.render(this, 0)',
+                    '__meta' => [
+                        'afxContent' => [
+                            0 => [
+                                '__objectType' => 'Neos.Fusion:Tag',
+                                '__value' => null,
+                                '__eelExpression' => null,
+                                'tagName' => 'p',
+                                'content' => 'foo'
+                            ]
+                        ]
+                    ],
+                    '__eelExpression' => 'Mhs.AfxContent.fromRuntimePathAndIndex(mhsRuntimePath, 0)',
                     '__value' => null,
                     '__objectType' => null,
                 ]
