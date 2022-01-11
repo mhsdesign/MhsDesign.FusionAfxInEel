@@ -26,6 +26,14 @@ class RuntimePath implements ProtectedContextAwareInterface
         return $this->fusionPath;
     }
 
+//    public function relative($path)
+//    {
+//        $segments = explode('/', $this->fusionPath);
+//        array_pop($segments);
+//        array_push()
+//        $parentPath = join();
+//    }
+
     public function __toString()
     {
         return "RuntimePath at: {$this->fusionPath}";

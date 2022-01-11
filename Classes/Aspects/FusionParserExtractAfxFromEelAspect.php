@@ -2,6 +2,7 @@
 
 namespace MhsDesign\FusionAfxInEel\Aspects;
 
+use MhsDesign\FusionAfxInEel\AfxContent\Helper\AfxContentHelper;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Aop\JoinPointInterface;
 
@@ -31,6 +32,10 @@ class FusionParserExtractAfxFromEelAspect
           )*
         )
       \)
+      (?:               # optional chained method, to determine final state.
+        \.
+        (?<chainedMethod>[a-zA-Z_][a-zA-Z0-9_\-]*)
+      )?
     /x
     REGEX;
 
@@ -72,13 +77,25 @@ class FusionParserExtractAfxFromEelAspect
     public static function extractAfxOutOfEelLineAndSeparateItIntoPaths(array $matches): string
     {
         $wholeEelExpressionWithStartTags = $matches[0];
-
         $additionalAfxContentPathValues = [];
 
         $replaceAfxFunctionsInEelWithThisPathAndRememberAfx = function ($matches) use (&$additionalAfxContentPathValues): string {
+
+            $isChained = false;
+            $appendToAfxCall = '';
+
+            $hasOneChainedMethod = isset($matches['chainedMethod']) && empty($matches['chainedMethod']) === false;
+
+            if ($hasOneChainedMethod) {
+                $chainedMethod = $matches['chainedMethod'];
+                $appendToAfxCall .= ".$chainedMethod";
+                $isChained = in_array($chainedMethod, AfxContentHelper::CHAINABLE_METHODS, true);
+            }
+
+            $isChainedString = $isChained ? 'true' : 'false';
             $index = count($additionalAfxContentPathValues);
             $additionalAfxContentPathValues[] = $matches['afx'];
-            return "Mhs.AfxContent.fromRuntimePathAndIndex(mhsRuntimePath, $index)";
+            return "Mhs.AfxContent.new(mhsRuntimePath, $index, $isChainedString)$appendToAfxCall";
         };
 
         $cleanedEelLine = preg_replace_callback(
