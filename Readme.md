@@ -9,6 +9,8 @@ If you want more info, look at some tests: https://github.com/mhsdesign/MhsDesig
 
 ## Examples:
 
+(I used made up helpers like `Array.loop()` and `Function.call()` in the examples.)
+
 AFX:
 ```
 <a href={afx(<Neos.Fusion:UriBuilder action="someMethod" />)}>Click me</a>
@@ -46,7 +48,7 @@ root = Neos.Fusion:Component {
 
     greet = ${name => afx(
         <h1>Hello {name}</h1>
-    )
+    )}
 
     renderer = afx`
         <div>
