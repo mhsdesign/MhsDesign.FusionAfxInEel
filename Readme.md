@@ -35,8 +35,8 @@ root = Neos.Fusion:Join {
     item_4.@afxContent.0 = afx`<Button>true</Button>`
     item_4.@afxContent.1 = afx`<Button2/>`
     item_4 = ${something
-        ? Mhs.AfxContent.new(mhsRuntimePath, 0, false)
-        : Mhs.AfxContent.new(mhsRuntimePath, 1, false)}
+        ? Mhs.AfxContent.new(mhsRuntimePath, 0, false, null)
+        : Mhs.AfxContent.new(mhsRuntimePath, 1, false, null)}
 }
 ```
 (If you're unsure how AFX is transpiled generally, visit: https://afx-converter.marchenry.de/)
