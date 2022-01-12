@@ -9,7 +9,7 @@ If you want more info, look at some tests: https://github.com/mhsdesign/MhsDesig
 
 ## Examples:
 
-(I used made up helpers like `Array.loop()` and `Function.call()` in the examples.)
+(I used made up helpers like `Array.loop()` and `Closure.call()` in the examples.)
 
 AFX:
 ```
@@ -52,7 +52,7 @@ root = Neos.Fusion:Component {
 
     renderer = afx`
         <div>
-            {Function.call(props.greet, 'Marc Henry')}
+            {Closure.call(props.greet, 'Marc Henry')}
         </div>
     `
 }
