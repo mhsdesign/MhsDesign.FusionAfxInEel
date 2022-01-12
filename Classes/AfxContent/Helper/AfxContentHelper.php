@@ -11,20 +11,31 @@ class AfxContentHelper implements ProtectedContextAwareInterface
     protected array $context;
     protected Runtime $runtime;
     protected string $fusionPath;
+    protected bool $callable = false;
 
     public const CHAINABLE_METHODS = [
-      'withContext'
+        'use',
+        'withContext',
     ];
 
-    public static function new(RuntimePath $runtimePath, int $index, bool $isChained)
+    /**
+     * entry point in eel to render afx path.
+     *
+     * @return AfxContentHelper|mixed|string|null
+     */
+    public static function new(RuntimePath $runtimePath, int $index, bool $isChained, ?array $context)
     {
-        $afxContentHelper = new self();
-        $afxContentHelper->runtime = $runtimePath->getRuntime();
-
         $currentPath = $runtimePath->getFusionPath();
-        $nestedAfxContent = "$currentPath/__meta/afxContent/$index";
+        $nestedAfxContentPath = "$currentPath/__meta/afxContent/$index";
 
-        $afxContentHelper->fusionPath = $nestedAfxContent;
+        $afxContentHelper = new self();
+        $afxContentHelper->callable = true;
+        $afxContentHelper->runtime = $runtimePath->getRuntime();
+        $afxContentHelper->fusionPath = $nestedAfxContentPath;
+
+        if (isset($context)) {
+            $afxContentHelper->context = $context;
+        }
 
         if ($isChained) {
             return $afxContentHelper;
@@ -33,31 +44,61 @@ class AfxContentHelper implements ProtectedContextAwareInterface
         return $afxContentHelper->render();
     }
 
+    /**
+     * alias for @see use
+     */
     public function withContext(array $context)
     {
-        $this->context = $context;
+        return $this->use($context);
+    }
+
+    /**
+     * use extra context for rendering.
+     */
+    public function use(array $context)
+    {
+        if (isset($this->context)) {
+            $this->context = array_merge($this->context, $context);
+        } else {
+            $this->context = $context;
+        }
         return $this->render();
     }
 
     protected function render()
     {
-        $needToPop = false;
-        if (isset($this->context)) {
-            $this->runtime->pushContextArray($this->context);
-            $needToPop = true;
+        try {
+
+            if ($withContext = (empty($this->context) === false)) {
+                $completeNewContext = array_merge(
+                    $this->runtime->getCurrentContext(),
+                    $this->context
+                );
+                $this->runtime->pushContextArray($completeNewContext);
+            }
+
+            return $this->runtime->evaluate($this->fusionPath);
+
+        } finally {
+
+            if ($withContext) {
+                $this->runtime->popContext();
+            }
+
         }
-
-        $value = $this->runtime->evaluate($this->fusionPath);
-
-        if ($needToPop) {
-            $this->runtime->popContext();
-        }
-
-        return $value;
     }
 
     public function allowsCallOfMethod($methodName)
     {
-        return true;
+        // the 'constructor'
+        if ($methodName === 'new') {
+            return true;
+        }
+
+        if ($this->callable === false) {
+            return false;
+        }
+
+        return in_array($methodName, self::CHAINABLE_METHODS, true);
     }
 }

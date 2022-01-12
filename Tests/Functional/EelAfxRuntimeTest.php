@@ -2,7 +2,7 @@
 
 namespace MhsDesign\FusionAfxInEel\Tests\Functional;
 
-use MhsDesign\FusionAfxInEel\AfxContent\AfxContentRenderer;
+use MhsDesign\FusionAfxInEel\RuntimePath\RuntimeWithEelRuntimePath;
 use Neos\Flow\Mvc\Controller\ControllerContext;
 use Neos\Fusion\Core\Runtime;
 use PHPUnit\Framework\TestCase;
@@ -10,59 +10,35 @@ use Neos\Fusion\Core\Parser;
 
 class EelAfxRuntimeTest extends TestCase
 {
-
-    public function doesNotWorkYet()
+    public function fusionProcessVariations()
     {
-        // Without fusion context object there is no way to get paths in eel.
-        yield 'withOutThisContext' => [
-            'context' => [],
-            'fusion' => <<<'Fusion'
-                root = ${afx(hello)}
-                Fusion,
-            'output' => 'hello'
-        ];
+        $context = [];
+        $output = '<p>foo</p>';
 
-        /*
-        Will get transpiled to: but the fusion parser only cares about 'value'
-            @afxContent.0 = afx`foo`
-            value = ${Mhs.AfxContent.render(this, 0)}
-         */
-        yield 'directTranspiledAfxToEelWithoutFurtherPaths' => [
-            'context' => [],
+        yield 'withProcessDirectlyConnectedToFusionObject' => [
+            'context' => $context,
             'fusion' => <<<'Fusion'
-                root = Neos.Fusion:Tag {
-                    tagName = 'p'
-                    content = afx`{afx(foo)}`
+                root = Neos.Fusion:Value {
+                    value = 'foo'
+                    @process.bar = ${afx(<p>{value}</p>)}
                 }
                 Fusion,
-            'output' => '<p>foo</p>'
+            'output' => $output
         ];
 
-        /*
-        works:
-        root = Neos.Fusion:Tag {
-            tagName = 'a'
-            @process.bar = ${afx(<Neos.Fusion:Value value={'[wrap' + value + ']'}/>)}
-        }
-        and this doenst:
-        root = Neos.Fusion:Tag {
-            tagName = 'a'
-            content.@process.bar = ${afx(<Neos.Fusion:Value value={'[wrap' + value + ']'}/>)}
-        }
-         */
         yield 'withProcessNotDirectlyConnectedToFusionObject' => [
-            'context' => [],
+            'context' => $context,
             'fusion' => <<<'Fusion'
                 root = Neos.Fusion:Value {
                     value = 'foo'
                     value.@process.bar = ${afx(<p>{value}</p>)}
                 }
                 Fusion,
-            'output' => '<p>foo</p>'
+            'output' => $output
         ];
 
-        yield 'withProcessNotDirectlyConnectedToFusionObject2' => [
-            'context' => [],
+        yield 'variation1WithProcessNotDirectlyConnectedToFusionObject' => [
+            'context' => $context,
             'fusion' => <<<'Fusion'
                 root = Neos.Fusion:Value {
                     value = 'foo'
@@ -71,11 +47,11 @@ class EelAfxRuntimeTest extends TestCase
                     }
                 }
                 Fusion,
-            'output' => '<p>foo</p>'
+            'output' => $output
         ];
 
-        yield 'withProcessNotDirectlyConnectedToFusionObject3' => [
-            'context' => [],
+        yield 'variation2withProcessNotDirectlyConnectedToFusionObject' => [
+            'context' => $context,
             'fusion' => <<<'Fusion'
                 root = Neos.Fusion:Value {
                     value = 'foo'
@@ -84,27 +60,207 @@ class EelAfxRuntimeTest extends TestCase
                     }
                 }
                 Fusion,
-            'output' => '<p>foo</p>'
+            'output' => $output
         ];
+    }
 
-        /*
-        No option available. Feature.
-         */
-        yield 'passingVarsToAfxCallback' => [
+    public function contextVariablesAndEvaluation()
+    {
+        yield 'passingSingleVarWithoutParensToAfx' => [
             'context' => [],
             'fusion' => <<<'Fusion'
                 root = afx`
                 <p>
                     {Array.join(Array.map([1, 2, 3], item => afx(
                         <a>{item}</a>
-                    ).withContext({item: item})), '')}
+                    )), '')}
                 </p>
                 `
                 Fusion,
             'output' => '<p><a>1</a><a>2</a><a>3</a></p>'
         ];
 
-        // will be barbar because this is the same, and the indexes will be both times 0 since no hash is used.
+        yield 'passingSingleVarWithParensToAfx' => [
+            'context' => [],
+            'fusion' => <<<'Fusion'
+                root = afx`
+                <p>
+                    {Array.join(Array.map([1, 2, 3], (item) => afx(
+                        <a>{item}</a>
+                    )), '')}
+                </p>
+                `
+                Fusion,
+            'output' => '<p><a>1</a><a>2</a><a>3</a></p>'
+        ];
+
+        yield 'passingMultipleVarsWithParensToAfx' => [
+            'context' => [],
+            'fusion' => <<<'Fusion'
+                root = afx`
+                <p>
+                    {Array.join(Array.map([1, 2, 3], (item, index) => afx(
+                        <a>{item} {index}</a>
+                    )), '')}
+                </p>
+                `
+                Fusion,
+            'output' => '<p><a>1 0</a><a>2 1</a><a>3 2</a></p>'
+        ];
+
+        yield 'useOverrideClosurePassedVar' => [
+            'context' => [],
+            'fusion' => <<<'Fusion'
+                root = afx`
+                <p>
+                    {Array.join(Array.map([1, 2, 3],
+                        (item, index) => afx(
+                            <a>{item} {index}</a>
+                        ).use({index: 'foo'})
+                    ), '')}
+                </p>
+                `
+                Fusion,
+            'output' => '<p><a>1 foo</a><a>2 foo</a><a>3 foo</a></p>'
+        ];
+
+        yield 'afx eel use outer context' => [
+            'context' => [
+                'baz' => 'foo'
+            ],
+            'fusion' => <<<'Fusion'
+                root = afx`
+                    <p>
+                        {afx(Outer: {baz})}
+                    </p>
+                `
+                Fusion,
+            'output' => '<p>Outer: foo</p>'
+        ];
+
+        yield 'use or arrow params override outer context' => [
+            'context' => [
+                'item' => 'baz',
+                'index' => 'baz'
+            ],
+            'fusion' => <<<'Fusion'
+                root = afx`
+                <p>
+                    {Array.join(Array.map([1, 2, 3],
+                        (item, index) => afx(
+                            <a>{item} {index}</a>
+                        ).use({index: 'foo'})
+                    ), '')}
+                </p>
+                `
+                Fusion,
+            'output' => '<p><a>1 foo</a><a>2 foo</a><a>3 foo</a></p>'
+        ];
+
+
+        /**
+         * TODO:
+         * is failing of course, since the => is not DIRECTLY in front of afx()
+         */
+//        yield 'passing vars to afx when not preceded by arrow "=>"' => [
+//            'context' => [],
+//            'fusion' => <<<'Fusion'
+//                root = afx`
+//                    {Array.join(Array.map(
+//                        ['0', '1'],
+//                        value => value == '1'
+//                            ? afx(true: {value})
+//                            : afx(false: {value})
+//                    ), ', ')}
+//                `
+//                Fusion,
+//            'output' => 'false: 0, true: 1'
+//        ];
+
+        yield 'passing vars explicit' => [
+            'context' => [],
+            'fusion' => <<<'Fusion'
+                root = afx`
+                    {Array.join(Array.map(
+                        ['0', '1'],
+                        value => value == '1'
+                            ? afx(true: {value}).use({value: value})
+                            : afx(false: {value}).use({value: value})
+                    ), ', ')}
+                `
+                Fusion,
+            'output' => 'false: 0, true: 1'
+        ];
+
+        yield 'passing this.path var explicit' => [
+            'context' => [],
+            'fusion' => <<<'Fusion'
+
+                prototype(Foo:Bar.Computed.State) < prototype(Neos.Fusion:Component) {
+
+                    title = ''
+                    type = ''
+
+                    _someTag = ${
+                        afx(
+                            <Neos.Fusion:Tag
+                                tagName={afx.type}
+                                content={afx.title}
+                            />
+                        ).use({
+                            afx: {
+                                type: this.type,
+                                title: this.title
+                            }
+                        })
+                    }
+
+                    renderer = afx`
+                        {props.type} {props._someTag}
+                    `
+                }
+
+                root = Foo:Bar.Computed.State {
+                    title = 'foo'
+                    type = 'h2'
+                }
+                Fusion,
+            'output' => 'h2 <h2>foo</h2>'
+        ];
+
+
+        yield 'loopWithNoVarsPassedToAfxStillReevaluates' => [
+            'context' => [
+                'timesCalled' => static function (): string {
+                    static $timesCalled;
+                    if (isset($timesCalled) === false) {
+                        $timesCalled = 0;
+                    }
+                    return ++$timesCalled;
+                }
+            ],
+            'fusion' => <<<'Fusion'
+                root = afx`
+                    {Array.join(Array.map(['', '', ''], x => afx(
+                        <a>{timesCalled()}</a>
+                    )), '')}
+                `
+                Fusion,
+            'output' => '<a>1</a><a>2</a><a>3</a>'
+        ];
+    }
+
+
+    public function contextObject()
+    {
+        yield 'withOutFusionObjectContext' => [
+            'context' => [],
+            'fusion' => <<<'Fusion'
+                root = ${afx(hello)}
+                Fusion,
+            'output' => 'hello'
+        ];
+
         yield 'sameContextObjectForMultipleAfxInEel' => [
             'context' => [],
             'fusion' => <<<'Fusion'
@@ -128,6 +284,7 @@ class EelAfxRuntimeTest extends TestCase
                 Fusion,
             'output' => '<p><span>hello</span></p>'
         ];
+
         yield 'insideAttribute' => [
             'context' => [],
             'fusion' => <<<'Fusion'
@@ -137,6 +294,30 @@ class EelAfxRuntimeTest extends TestCase
                 Fusion,
             'output' => '<p class="hello"></p>'
         ];
+
+        yield 'afxDirectlyToEel' => [
+            'context' => [],
+            'fusion' => <<<'Fusion'
+                root = Neos.Fusion:Tag {
+                    tagName = 'p'
+                    content = afx`{afx(foo)}`
+                }
+                Fusion,
+            'output' => '<p>foo</p>'
+        ];
+
+        yield 'afxAsPreprocessor' => [
+            'context' => [],
+            'fusion' => <<<'Fusion'
+                root = afx`
+                    <p>
+                        <a @process.bar={afx(<Neos.Fusion:Value value={'[wrap' + value + ']'}/>)} ></a>
+                    </p>
+                `
+                Fusion,
+            'output' => '<p>[wrap<a></a>]</p>'
+        ];
+
         yield 'multipleAfxInOneEel' => [
             'context' => ['foo' => false],
             'fusion' => <<<'Fusion'
@@ -150,17 +331,6 @@ class EelAfxRuntimeTest extends TestCase
                 `
                 Fusion,
             'output' => '<p><a>foo</a><br /><p>false</p></p>'
-        ];
-        yield 'afxAsPreprocessor' => [
-            'context' => [],
-            'fusion' => <<<'Fusion'
-                root = afx`
-                    <p>
-                        <a @process.bar={afx(<Neos.Fusion:Value value={'[wrap' + value + ']'}/>)} ></a>
-                    </p>
-                `
-                Fusion,
-            'output' => '<p>[wrap<a></a>]</p>'
         ];
 
         yield 'nestedAfxInEel' => [
@@ -178,7 +348,6 @@ class EelAfxRuntimeTest extends TestCase
                 Fusion,
             'output' => '<p><a><b><c></c></b></a></p>'
         ];
-
 
         yield 'fusionValueInsteadOfTagAsContextObject' => [
             'context' => [],
@@ -201,22 +370,13 @@ class EelAfxRuntimeTest extends TestCase
                 'foo' => '<a></a>'
             ]
         ];
-
-        yield 'withProcessConnectedDirectlyToFusionObject' => [
-            'context' => [],
-            'fusion' => <<<'Fusion'
-                root = Neos.Fusion:Value {
-                    value = 'foo'
-                    @process.bar = ${afx(<p>{value}</p>)}
-                }
-                Fusion,
-            'output' => '<p>foo</p>'
-        ];
     }
 
     /**
      * @test
-     * @dataProvider doesNotWorkYet
+     * @dataProvider fusionProcessVariations
+     * @dataProvider contextVariablesAndEvaluation
+     * @dataProvider contextObject
      * @dataProvider workingAfxInEel
      */
     public function afxInEelRendersCorrectly(array $fusionContext, string $fusionCode, $expectedOutput)
@@ -224,17 +384,13 @@ class EelAfxRuntimeTest extends TestCase
         $fusionCode = "include: resource://Neos.Fusion/Private/Fusion/Root.fusion\n" . $fusionCode;
 
         $runtime = $this->getRuntimeForFusionCode($fusionCode);
-        $runtime->pushContextArray($fusionContext);
+
+        empty($fusionContext) ?: $runtime->pushContextArray($fusionContext);
 
         $renderedFusion = $runtime->render('root');
 
-        if ($renderedFusion instanceof AfxContentRenderer) {
-            $renderedFusion = (string)$renderedFusion;
-        }
-
         $expectedOutput = is_string($expectedOutput) ? trim($expectedOutput) : $expectedOutput;
         $renderedFusion = is_string($renderedFusion) ? trim($renderedFusion) : $renderedFusion;
-
 
         self::assertSame($expectedOutput, $renderedFusion, 'Rendered Fusion didnt match expected.');
     }
@@ -244,7 +400,7 @@ class EelAfxRuntimeTest extends TestCase
         $controllerContext = $this->getMockBuilder(ControllerContext::class)->disableOriginalConstructor()->getMock();
         $fusionAst = (new Parser())->parse($fusionCode);
 
-        $runtime = new Runtime($fusionAst, $controllerContext);
+        $runtime = new RuntimeWithEelRuntimePath($fusionAst, $controllerContext);
         // TODO: Temp. fix #3548
         $runtime->pushContext('somethingSoContextIsNotEmpty', 'bar');
         return $runtime;

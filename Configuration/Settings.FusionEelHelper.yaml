@@ -3,3 +3,7 @@ Neos:
   Fusion:
     defaultContext:
       Mhs.AfxContent: 'MhsDesign\FusionAfxInEel\AfxContent\Helper\AfxContentHelper'
+      # if you're looking for afx()
+      # its not registered here like:
+      # afx: Foo\Bar::afx
+      # afx() is a parsing time language construct. I also could have been '##AFX##{<p></p>}'

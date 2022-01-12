@@ -7,20 +7,10 @@ use PHPUnit\Framework\TestCase;
 
 class EelAfxParserTest extends TestCase
 {
-    /**
-     * @test
-     */
-    public function inside_seemingly_not_nested_path_with_donts()
+
+    public function afxInEel()
     {
-        $fusion = <<<'Fusion'
-        root = Neos.Fusion:Value {
-            value = ${afx(<p>foo</p>)}
-        }
-        Fusion;
-
-        $actualAst = (new Parser())->parse($fusion);
-
-        $expectedAst = [
+        $simpleFusion = [
             'root' => [
                 '__objectType' => 'Neos.Fusion:Value',
                 '__value' => null,
@@ -37,53 +27,112 @@ class EelAfxParserTest extends TestCase
                             ]
                         ]
                     ],
-                    '__eelExpression' => 'Mhs.AfxContent.fromRuntimePathAndIndex(mhsRuntimePath, 0)',
+                    '__eelExpression' => 'Mhs.AfxContent.new(mhsRuntimePath, 0, false, null)',
                     '__value' => null,
                     '__objectType' => null,
                 ]
             ]
         ];
 
-        self::assertSame($expectedAst, $actualAst);
+        yield 'simple fusion' => [
+            <<<'Fusion'
+            root = Neos.Fusion:Value {
+                value = ${afx(<p>foo</p>)}
+            }
+            Fusion,
+            $simpleFusion
+        ];
+
+        yield 'simple fusion different written' => [
+            <<<'Fusion'
+            root = Neos.Fusion:Value
+            root.value = ${afx(<p>foo</p>)}
+            Fusion,
+            $simpleFusion
+        ];
+
+
+        $fusionProcess = [
+            'root' => [
+                '__value' => '',
+                '__eelExpression' => null,
+                '__objectType' => null,
+                '__meta' => [
+                    'process' => [
+                        [
+                            '__meta' => [
+                                'afxContent' => [
+                                    0 => [
+                                        '__objectType' => 'Neos.Fusion:Tag',
+                                        '__value' => null,
+                                        '__eelExpression' => null,
+                                        'tagName' => 'p',
+                                        'content' => [
+                                            '__eelExpression' => 'value',
+                                            '__value' => null,
+                                            '__objectType' => null,
+                                        ],
+                                    ],
+                                ],
+                            ],
+                            '__eelExpression' => 'Mhs.AfxContent.new(mhsRuntimePath, 0, false, null)',
+                            '__value' => null,
+                            '__objectType' => null,
+                        ],
+                    ],
+                ],
+            ],
+        ];
+
+        yield 'fusion eel afx in process' => [
+            <<<'Fusion'
+            root = ''
+            root.@process.0 = ${afx(<p>{value}</p>)}
+            Fusion,
+            $fusionProcess
+        ];
+
+        yield 'fusion eel afx in process alternate syntax' => [
+            <<<'Fusion'
+            root = ''
+            root {
+                @process {
+                    0 = ${afx(<p>{value}</p>)}
+                }
+            }
+            Fusion,
+            $fusionProcess
+        ];
+
+
+        yield 'eel closure arguments to afx() are detected' => [
+            <<<'Fusion'
+            root = afx`
+                {(foo, bar) => afx()}
+            `
+            Fusion,
+            [
+                'root' => [
+                    '__meta' => [
+                        'afxContent' => [
+                            0 => ''
+                        ]
+                    ],
+                    '__eelExpression' => '(foo, bar) => Mhs.AfxContent.new(mhsRuntimePath, 0, false, {foo: foo, bar: bar})',
+                    '__value' => null,
+                    '__objectType' => null
+                ]
+            ]
+        ];
     }
 
-
     /**
      * @test
+     * @dataProvider afxInEel
      */
-    public function with_dots_nested_path_in_line()
+    public function fusionParsesToAst(string $fusion, array $expectedAst)
     {
-        $fusion = <<<'Fusion'
-        root = Neos.Fusion:Value
-        root.value = ${afx(<p>foo</p>)}
-        Fusion;
-
         $actualAst = (new Parser())->parse($fusion);
-
-        $expectedAst = [
-            'root' => [
-                '__objectType' => 'Neos.Fusion:Value',
-                '__value' => null,
-                '__eelExpression' => null,
-                'value' => [
-                    '__meta' => [
-                        'afxContent' => [
-                            0 => [
-                                '__objectType' => 'Neos.Fusion:Tag',
-                                '__value' => null,
-                                '__eelExpression' => null,
-                                'tagName' => 'p',
-                                'content' => 'foo'
-                            ]
-                        ]
-                    ],
-                    '__eelExpression' => 'Mhs.AfxContent.fromRuntimePathAndIndex(mhsRuntimePath, 0)',
-                    '__value' => null,
-                    '__objectType' => null,
-                ]
-            ]
-        ];
-
         self::assertSame($expectedAst, $actualAst);
     }
 }
