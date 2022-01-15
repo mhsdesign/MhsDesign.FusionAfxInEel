@@ -16,28 +16,39 @@ class EelAfxParserTest extends TestCase
                 '__value' => null,
                 '__eelExpression' => null,
                 'value' => [
-                    '__meta' => [
-                        'afxContent' => [
-                            0 => [
-                                '__objectType' => 'Neos.Fusion:Tag',
-                                '__value' => null,
-                                '__eelExpression' => null,
-                                'tagName' => 'p',
-                                'content' => 'foo'
-                            ]
-                        ]
-                    ],
-                    '__eelExpression' => 'Mhs.AfxContent.new(mhsRuntimePath, 0, false, null)',
+                    '__eelExpression' => "Mhs.AfxContent.new(this.runtime, '216f62df557e5cb383c52721a9e0596f', false, null)",
                     '__value' => null,
                     '__objectType' => null,
                 ]
-            ]
+            ],
+            '__meta' => [
+                'afxContent' => [
+                    '216f62df557e5cb383c52721a9e0596f' => [
+                        '__objectType' => 'Neos.Fusion:Tag',
+                        '__value' => null,
+                        '__eelExpression' => null,
+                        'tagName' => 'p',
+                        'content' => 'foo'
+                    ]
+                ]
+            ],
         ];
 
         yield 'simple fusion' => [
             <<<'Fusion'
             root = Neos.Fusion:Value {
                 value = ${afx(<p>foo</p>)}
+            }
+            Fusion,
+            $simpleFusion
+        ];
+
+        yield 'simple fusion afx eel afx' => [
+            <<<'Fusion'
+            root = Neos.Fusion:Value {
+                value = afx`
+                    {afx(<p>foo</p>)}
+                `
             }
             Fusion,
             $simpleFusion
@@ -60,22 +71,22 @@ class EelAfxParserTest extends TestCase
                 '__meta' => [
                     'process' => [
                         [
-                            '__meta' => [
-                                'afxContent' => [
-                                    0 => [
-                                        '__objectType' => 'Neos.Fusion:Tag',
-                                        '__value' => null,
-                                        '__eelExpression' => null,
-                                        'tagName' => 'p',
-                                        'content' => [
-                                            '__eelExpression' => 'value',
-                                            '__value' => null,
-                                            '__objectType' => null,
-                                        ],
-                                    ],
-                                ],
-                            ],
-                            '__eelExpression' => 'Mhs.AfxContent.new(mhsRuntimePath, 0, false, null)',
+                            '__eelExpression' => "Mhs.AfxContent.new(this.runtime, '6400517aefaaf51e9c4002c1db447504', false, null)",
+                            '__value' => null,
+                            '__objectType' => null,
+                        ],
+                    ],
+                ],
+            ],
+            '__meta' => [
+                'afxContent' => [
+                    '6400517aefaaf51e9c4002c1db447504' => [
+                        '__objectType' => 'Neos.Fusion:Tag',
+                        '__value' => null,
+                        '__eelExpression' => null,
+                        'tagName' => 'p',
+                        'content' => [
+                            '__eelExpression' => 'value',
                             '__value' => null,
                             '__objectType' => null,
                         ],
@@ -107,21 +118,19 @@ class EelAfxParserTest extends TestCase
 
         yield 'eel closure arguments to afx() are detected' => [
             <<<'Fusion'
-            root = afx`
-                {(foo, bar) => afx()}
-            `
+            root = ${(foo, bar) => afx()}
             Fusion,
             [
                 'root' => [
-                    '__meta' => [
-                        'afxContent' => [
-                            0 => ''
-                        ]
-                    ],
-                    '__eelExpression' => '(foo, bar) => Mhs.AfxContent.new(mhsRuntimePath, 0, false, {foo: foo, bar: bar})',
+                    '__eelExpression' => "(foo, bar) => Mhs.AfxContent.new(this.runtime, 'd41d8cd98f00b204e9800998ecf8427e', false, {foo: foo, bar: bar})",
                     '__value' => null,
                     '__objectType' => null
-                ]
+                ],
+                '__meta' => [
+                    'afxContent' => [
+                        'd41d8cd98f00b204e9800998ecf8427e' => ''
+                    ]
+                ],
             ]
         ];
     }

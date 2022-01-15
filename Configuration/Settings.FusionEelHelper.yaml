@@ -6,4 +6,4 @@ Neos:
       # if you're looking for afx()
       # its not registered here like:
       # afx: Foo\Bar::afx
-      # afx() is a parsing time language construct. I also could have been '##AFX##{<p></p>}'
+      # afx() is a parsing time language construct. It also could have been '##AFX##{<p></p>}'

@@ -1,8 +1,0 @@
-
-MhsDesign:
-  FusionAfxInEel:
-    aop:
-      # This flag will make it possible to use the Custom Runtime via the default FusionView.
-      enableCustomRuntimeForFusionService: true
-      # This flag will make it possible to preprocess Fusion files, before being parsed.
-      enableFusionParserPreprocess: true

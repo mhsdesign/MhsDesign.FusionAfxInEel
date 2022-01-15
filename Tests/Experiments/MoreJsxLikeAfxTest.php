@@ -49,7 +49,8 @@ class MoreJsxLikeAfxTest extends TestCase
         yield 'ternary afx in loop with nested afx' => [
             'context' => [],
             'fusion' => <<<'Fusion'
-                root = afx`
+                root = Neos.Fusion:Value
+                root.value = afx`
                     {loop(
                         [1, 2, 3],
                         item => item % 2
@@ -155,7 +156,7 @@ class MoreJsxLikeAfxTest extends TestCase
         $controllerContext = $this->getMockBuilder(ControllerContext::class)->disableOriginalConstructor()->getMock();
         $fusionAst = (new Parser())->parse($fusionCode);
 
-        $runtime = new RuntimeWithEelRuntimePath($fusionAst, $controllerContext);
+        $runtime = new Runtime($fusionAst, $controllerContext);
         // TODO: Temp. fix #3548
         $runtime->pushContext('somethingSoContextIsNotEmpty', 'bar');
         return $runtime;

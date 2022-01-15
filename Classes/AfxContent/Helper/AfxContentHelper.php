@@ -2,7 +2,6 @@
 
 namespace MhsDesign\FusionAfxInEel\AfxContent\Helper;
 
-use MhsDesign\FusionAfxInEel\RuntimePath\RuntimePath;
 use Neos\Eel\ProtectedContextAwareInterface;
 use Neos\Fusion\Core\Runtime;
 
@@ -23,17 +22,19 @@ class AfxContentHelper implements ProtectedContextAwareInterface
      *
      * @return AfxContentHelper|mixed|string|null
      */
-    public static function new(RuntimePath $runtimePath, int $index, bool $isChained, ?array $context)
+    public static function new(?Runtime $runtime, string $hash, bool $isChained, ?array $context)
     {
-        $currentPath = $runtimePath->getFusionPath();
-        $nestedAfxContentPath = "$currentPath/__meta/afxContent/$index";
+        if ($runtime === null) {
+            throw new \Exception("Afx content '$hash' couldn't be rendered, since no runtime is available.");
+        }
+
+        $absoluteAfxPath = "__meta/afxContent/$hash";
 
         $afxContentHelper = new self();
-        $afxContentHelper->callable = true;
-        $afxContentHelper->runtime = $runtimePath->getRuntime();
-        $afxContentHelper->fusionPath = $nestedAfxContentPath;
+        $afxContentHelper->runtime = $runtime;
+        $afxContentHelper->fusionPath = $absoluteAfxPath;
 
-        if (isset($context)) {
+        if ($context !== null) {
             $afxContentHelper->context = $context;
         }
 
@@ -42,14 +43,6 @@ class AfxContentHelper implements ProtectedContextAwareInterface
         }
 
         return $afxContentHelper->render();
-    }
-
-    /**
-     * alias for @see use
-     */
-    public function withContext(array $context)
-    {
-        return $this->use($context);
     }
 
     /**
@@ -65,27 +58,31 @@ class AfxContentHelper implements ProtectedContextAwareInterface
         return $this->render();
     }
 
+    /**
+     * alias for @see use
+     */
+    public function withContext(array $context)
+    {
+        return $this->use($context);
+    }
+
     protected function render()
     {
-        try {
-
-            if ($withContext = (empty($this->context) === false)) {
-                $completeNewContext = array_merge(
-                    $this->runtime->getCurrentContext(),
-                    $this->context
-                );
-                $this->runtime->pushContextArray($completeNewContext);
-            }
-
-            return $this->runtime->evaluate($this->fusionPath);
-
-        } finally {
-
-            if ($withContext) {
-                $this->runtime->popContext();
-            }
-
+        if ($withContext = (empty($this->context) === false)) {
+            $completeNewContext = array_merge(
+                $this->runtime->getCurrentContext(),
+                $this->context
+            );
+            $this->runtime->pushContextArray($completeNewContext);
         }
+
+        $result = $this->runtime->evaluate($this->fusionPath);
+
+        if ($withContext) {
+            $this->runtime->popContext();
+        }
+
+        return $result;
     }
 
     public function allowsCallOfMethod($methodName)
@@ -93,10 +90,6 @@ class AfxContentHelper implements ProtectedContextAwareInterface
         // the 'constructor'
         if ($methodName === 'new') {
             return true;
-        }
-
-        if ($this->callable === false) {
-            return false;
         }
 
         return in_array($methodName, self::CHAINABLE_METHODS, true);

@@ -63,15 +63,20 @@ class FusionPreprocessAfxInEel
 
     protected const PATTERN_REVERSED_ARROW_FUNCTION_PARAMETER = <<<'REGEX'
     /
-      ^>=\s*
+      ^>=\s*+
       (?>
-        (?P<single>[a-zA-Z0-9_-]*[a-zA-Z_])
+        (?P<single>[a-zA-Z0-9_-]++)
         |(?P<tuple>
           \)
+            \s*+
+            [a-zA-Z0-9_-]++
+            \s*+
             (?:
-              \s*,?\s*
-              [a-zA-Z0-9_-]*[a-zA-Z_]
-            )+
+              ,
+              \s*+
+              [a-zA-Z0-9_-]++
+              \s*+
+            )*+
           \(
         )
       )
@@ -85,11 +90,14 @@ class FusionPreprocessAfxInEel
     /x
     REGEX;
 
-    public static function extractAfxFromEelAndMakeItAccessibleWithHelperAndPath(string $fusionCode): string
+    public static function extractAfxFromEelAndMakeItAccessibleWithHelperAndPath(string $fusionCode): ?string
     {
+        $extractedAfxWithHash = [];
         $newSourceCode = preg_replace_callback(
             self::PATTERN_OBJECT_PATH_EEL_EXPRESSION_ASSIGN,
-            [self::class, 'extractAfxOutOfEelLineAndSeparateItIntoPaths'],
+            function ($matches) use (&$extractedAfxWithHash) {
+                return self::extractAfxOutOfEelLineAndSeparateItIntoPaths($matches, $extractedAfxWithHash);
+            },
             $fusionCode
         );
 
@@ -97,49 +105,48 @@ class FusionPreprocessAfxInEel
             throw new \Exception("newSourceCode should be string. preg_replace_callback error.");
         }
 
-        return $newSourceCode;
+        $newSourceCodeWithAfxPath = $newSourceCode
+            . self::renderAfxContentFusionLines($extractedAfxWithHash);
+
+        return $newSourceCodeWithAfxPath;
     }
 
-    protected static function extractAfxOutOfEelLineAndSeparateItIntoPaths(array $matches): string
+    protected static function renderAfxContentFusionLines(array $extractedAfxWithHash): string
+    {
+        $fusionLines = "";
+        foreach ($extractedAfxWithHash as $hash => $afxContent) {
+            if (strpos($afxContent, '`') !== false) {
+                throw new \Exception("Eel Afx cannot contain backtick: '`'.", 1641935605);
+            }
+            $fusionLines .= "\n@afxContent.'$hash' = afx`$afxContent`";
+        }
+        return $fusionLines;
+    }
+
+    protected static function extractAfxOutOfEelLineAndSeparateItIntoPaths(array $matches, array &$extractedAfxWithHash): string
     {
         // can be eel multiline also.
         $fusionLineObjectPathWithEel = $matches[0];
         $eelExpressionContent = $matches['exp'];
         $indent = $matches['indent'];
         $objectPath = $matches['objectPath'];
-        $extractedAfx = [];
 
         $eelContentWithOutAfx = preg_replace_callback(
             self::PATTERN_AFX_IN_EEL_EXPRESSION,
-            function ($matches) use (&$extractedAfx, $eelExpressionContent) {
-                return self::extractAfxFromAfxFunctionsAndReplaceWithAfxContentHelperAndAfxIndex($eelExpressionContent, $matches, $extractedAfx);
+            function ($matches) use ($eelExpressionContent, &$extractedAfxWithHash) {
+                return self::extractAfxFromAfxFunctionsAndReplaceWithAfxContentHelperAndAfxIndex($eelExpressionContent, $matches, $extractedAfxWithHash);
             },
             $eelExpressionContent,
             -1,
-            $_,
+            $count,
             PREG_OFFSET_CAPTURE
         );
 
-        if (empty($extractedAfx)) {
+        if ($count === 0) {
             return $fusionLineObjectPathWithEel;
         }
 
-        $newFusionLines = self::renderAfxContentFusionLines($extractedAfx, $indent, $objectPath);
-        $newFusionLines[] = "{$indent}{$objectPath} = " . '${' . $eelContentWithOutAfx .'}';
-
-        return join("\n", $newFusionLines);
-    }
-
-    protected static function renderAfxContentFusionLines(array $extractedAfx, string $indent, string $objectPath): array
-    {
-        $fusionLines = [];
-        foreach ($extractedAfx as $index => $afxContentPathValue) {
-            if (strpos($afxContentPathValue, '`') !== false) {
-                throw new \Exception("Eel Afx cannot contain backtick: '`'.", 1641935605);
-            }
-            $fusionLines[] = "{$indent}{$objectPath}.@afxContent.$index = afx`$afxContentPathValue`";
-        }
-        return $fusionLines;
+        return "{$indent}{$objectPath} = " . '${' . $eelContentWithOutAfx .'}';
     }
 
     protected static function tryGetPrecedingParameterListOfArrowClosureSyntax(string $beforeAfxFunction): ?array
@@ -148,8 +155,8 @@ class FusionPreprocessAfxInEel
         if (substr($reversed, 0, 2) !== '>=') {
             return null;
         }
-        // <=  eulav
-        // <=  (xedni, eulav)
+        // >=  eulav
+        // >=  )xedni, eulav(
         if (!preg_match(self::PATTERN_REVERSED_ARROW_FUNCTION_PARAMETER, $reversed, $matches, PREG_UNMATCHED_AS_NULL)) {
             return null;
         }
@@ -177,11 +184,12 @@ class FusionPreprocessAfxInEel
         return $matches['chainedMethodName'];
     }
 
-    protected static function extractAfxFromAfxFunctionsAndReplaceWithAfxContentHelperAndAfxIndex(string $eelExpressionContent, array $matches, array &$extractedAfx): string
+    protected static function extractAfxFromAfxFunctionsAndReplaceWithAfxContentHelperAndAfxIndex(string $eelExpressionContent, array $matches, array &$extractedAfxWithHash): string
     {
         [$afx] = $matches['afx'];
-        $listLength = array_push($extractedAfx, $afx);
-        $lastItemIndex = $listLength - 1;
+
+        $hash = md5($afx);
+        $extractedAfxWithHash[$hash] = $afx;
 
         [$completeAfxFunction, $afxFunctionStart] = $matches[0];
 
@@ -195,10 +203,10 @@ class FusionPreprocessAfxInEel
         $isChainedWithKnownMethod = isset($chainedMethodName)
             && in_array($chainedMethodName, AfxContentHelper::CHAINABLE_METHODS, true);
 
-        return self::renderAfxContentEelHelper($lastItemIndex, $isChainedWithKnownMethod, $closureParams);
+        return self::renderAfxContentEelHelper($hash, $isChainedWithKnownMethod, $closureParams);
     }
 
-    protected static function renderAfxContentEelHelper(int $afxContentPathIndex, string $isChained, ?array $contextParamList)
+    protected static function renderAfxContentEelHelper(string $afxContentPathHash, string $isChained, ?array $contextParamList)
     {
         $isChainedArg = $isChained ? 'true' : 'false';
 
@@ -211,6 +219,6 @@ class FusionPreprocessAfxInEel
             $contextArg = '{' . join(', ', $contextKeyValueStringList) . '}';
         }
 
-        return "Mhs.AfxContent.new(mhsRuntimePath, $afxContentPathIndex, $isChainedArg, $contextArg)";
+        return "Mhs.AfxContent.new(this.runtime, '$afxContentPathHash', $isChainedArg, $contextArg)";
     }
 }

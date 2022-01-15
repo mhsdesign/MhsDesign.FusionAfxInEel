@@ -9,6 +9,8 @@ If you want more info, look at some tests: https://github.com/mhsdesign/MhsDesig
 
 ## Examples:
 
+(I used made up helpers like `Array.loop()` and `Closure.call()` in the examples.)
+
 AFX:
 ```
 <a href={afx(<Neos.Fusion:UriBuilder action="someMethod" />)}>Click me</a>
@@ -33,8 +35,8 @@ root = Neos.Fusion:Join {
     item_4.@afxContent.0 = afx`<Button>true</Button>`
     item_4.@afxContent.1 = afx`<Button2/>`
     item_4 = ${something
-        ? Mhs.AfxContent.new(mhsRuntimePath, 0, false)
-        : Mhs.AfxContent.new(mhsRuntimePath, 1, false)}
+        ? Mhs.AfxContent.new(mhsRuntimePath, 0, false, null)
+        : Mhs.AfxContent.new(mhsRuntimePath, 1, false, null)}
 }
 ```
 (If you're unsure how AFX is transpiled generally, visit: https://afx-converter.marchenry.de/)
@@ -46,11 +48,11 @@ root = Neos.Fusion:Component {
 
     greet = ${name => afx(
         <h1>Hello {name}</h1>
-    )
+    )}
 
     renderer = afx`
         <div>
-            {Function.call(props.greet, 'Marc Henry')}
+            {Closure.call(props.greet, 'Marc Henry')}
         </div>
     `
 }

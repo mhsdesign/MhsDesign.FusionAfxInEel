@@ -144,7 +144,8 @@ class EelAfxRuntimeTest extends TestCase
                 'index' => 'baz'
             ],
             'fusion' => <<<'Fusion'
-                root = afx`
+                root = Neos.Fusion:Value
+                root.value = afx`
                 <p>
                     {Array.join(Array.map([1, 2, 3],
                         (item, index) => afx(
@@ -160,7 +161,7 @@ class EelAfxRuntimeTest extends TestCase
 
         /**
          * TODO:
-         * is failing of course, since the => is not DIRECTLY in front of afx()
+         * is failing of course, since the arrow => is not DIRECTLY in front of afx()
          */
 //        yield 'passing vars to afx when not preceded by arrow "=>"' => [
 //            'context' => [],
@@ -180,7 +181,8 @@ class EelAfxRuntimeTest extends TestCase
         yield 'passing vars explicit' => [
             'context' => [],
             'fusion' => <<<'Fusion'
-                root = afx`
+                root = Neos.Fusion:Value
+                root.value = afx`
                     {Array.join(Array.map(
                         ['0', '1'],
                         value => value == '1'
@@ -240,7 +242,8 @@ class EelAfxRuntimeTest extends TestCase
                 }
             ],
             'fusion' => <<<'Fusion'
-                root = afx`
+                root = Neos.Fusion:Value
+                root.value = afx`
                     {Array.join(Array.map(['', '', ''], x => afx(
                         <a>{timesCalled()}</a>
                     )), '')}
@@ -253,12 +256,51 @@ class EelAfxRuntimeTest extends TestCase
 
     public function contextObject()
     {
-        yield 'withOutFusionObjectContext' => [
+// TODO: cannot work
+//        yield 'withOutFusionObjectContext' => [
+//            'context' => [],
+//            'fusion' => <<<'Fusion'
+//                root = ${afx(hello)}
+//                Fusion,
+//            'output' => 'hello'
+//        ];
+
+// TODO: cannot work
+//        yield 'contextObjectInCustomRenderPath' => [
+//            'context' => [],
+//            'fusion' => <<<'Fusion'
+//                root = Neos.Fusion:Renderer {
+//                    renderPath = '/bar'
+//                }
+//                bar = ${afx(foo)}
+//                Fusion,
+//            'output' => 'foo'
+//        ];
+
+
+        yield 'contextObjectInNestedProcess' => [
             'context' => [],
             'fusion' => <<<'Fusion'
-                root = ${afx(hello)}
+                root = Neos.Fusion:Value {
+                    value = 'foo'
+                    value.@process.1 {
+                        expression = ${value}
+                        expression.@process.2 = ${afx(bar {value})}
+                    }
+                }
                 Fusion,
-            'output' => 'hello'
+            'output' => 'bar foo'
+        ];
+
+        yield 'contextObjectInTypeRenderer' => [
+            'context' => [],
+            'fusion' => <<<'Fusion'
+                root = Neos.Fusion:Renderer {
+                    type = 'Neos.Fusion:Value'
+                    element.value = ${afx(foo)}
+                }
+                Fusion,
+            'output' => 'foo'
         ];
 
         yield 'sameContextObjectForMultipleAfxInEel' => [
@@ -370,6 +412,19 @@ class EelAfxRuntimeTest extends TestCase
                 'foo' => '<a></a>'
             ]
         ];
+
+
+        yield 'foo' => [
+            'context' => [],
+            'fusion' => <<<'Fusion'
+                root = Neos.Fusion:DataStructure {
+                    foo = ${afx(<a></a>)}
+                }
+                Fusion,
+            'output' => [
+                'foo' => '<a></a>'
+            ]
+        ];
     }
 
     /**
@@ -400,7 +455,7 @@ class EelAfxRuntimeTest extends TestCase
         $controllerContext = $this->getMockBuilder(ControllerContext::class)->disableOriginalConstructor()->getMock();
         $fusionAst = (new Parser())->parse($fusionCode);
 
-        $runtime = new RuntimeWithEelRuntimePath($fusionAst, $controllerContext);
+        $runtime = new Runtime($fusionAst, $controllerContext);
         // TODO: Temp. fix #3548
         $runtime->pushContext('somethingSoContextIsNotEmpty', 'bar');
         return $runtime;
